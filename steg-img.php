@@ -103,13 +103,12 @@ Note6: Storing files
 
 
 define('VERSION_CODE',		0x01);	// The version of the program. Will be included in the carrier.
-
 define('HEADER_LENGTH',		9);		// Length of the header (in bytes).
 define('MIN_PASS_LENGTH',	8);		// The length of the smallest password we will tolerate.
 define('CIPHER',			MCRYPT_RIJNDAEL_128);
 define('BLOCK_MODE',		MCRYPT_MODE_CBC);
 
-
+ini_set('memory_limit', '512M');
 
 class StegImage {
 
