@@ -16,3 +16,13 @@ Class and Form are both GPL-2, so be free.
 If anyone is feeling generous, my bitcoin address is 17da1aqXEhdqMkbEq66nc2n5DeAnrnNbsK. Donations help me justify spending time on my computer to my wife. :-)
 
 ---J. Ian Lindsay
+
+
+
+Additionally
+---
+There must be a directory with the approriate permissions named uploads in the same folder as form.php
+
+GD must be installed and enabled
+
+Mcrypt must be installed and enabled

@@ -218,6 +218,38 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 							</table>
 						</td>
 					</tr>
+						<td>
+							<table>
+								<tr><td colspan='2'><h2>Server-Side Checks</h2></td></tr>
+								<tr>
+									<td><b>Is GD available?: </b></td>
+									<?php 
+										$bool = function_exists("imagecreatefrompng");
+										if($bool){
+											echo "<td> Yes! </td>";
+										} else {
+											echo "<td> No, Aborting!";
+											error_log("Missing GD Libraray");
+											die();
+										}
+									?>
+								</tr>
+								<tr>
+									<td><b>Is Mcrypt available?: </b></td>
+									<?php 
+										$bool = function_exists("mcrypt_get_iv_size");
+										if($bool){
+											echo "<td> Yes! </td>";
+										} else {
+											echo "<td> No, Aborting!";
+											error_log("Missing Mcrypt Libraray");
+											die();
+										}
+									?>
+								</tr>
+							</table>						
+						</td>
+
 					<tr><td colspan='2'>	&nbsp;</td></tr>
 	    		
 					<?php if ($state == 0) { ?>
@@ -228,7 +260,7 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 							</td>
 						</tr>
 					<?php } else if ($state >= 1) { ?>
-						<tr><td colspan='2'><h3>Encryption key:</h3></td></tr>
+						<tr><td colspan='2'><h3>Encryption key: (at least <?php echo MIN_PASS_LENGTH ?> chars)</h3></td></tr>
 						<tr>
 							<td colspan='2'>
 								<input type='text' name='key' />
@@ -248,7 +280,7 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 						<tr><td><h3>Packing options:</h3></td><td><h3>Debug options:</h3></td></tr>
 						<tr>
 							<td>
-								<input type='checkbox' name='rescale' checked />&nbsp;&nbsp;Rescale carrier to minimum-required resolution?<br />
+								<input type='checkbox' name='rescale' checked />&nbsp;&nbsp;Rescale carrier to minimum-required resolution? (uncheck to get file back at normal resolution)<br />
 								<input type='checkbox' name='store_filename' checked />&nbsp;&nbsp;Append filename information?<br />
 								<input type='checkbox' name='compress' checked />&nbsp;&nbsp;Compress message prior to encryption?<br />
 								<br />
