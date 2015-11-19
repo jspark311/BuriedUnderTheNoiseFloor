@@ -3,10 +3,25 @@
 * File:		form.php
 * Author:	J. Ian Lindsay
 * Date:		2013.03.22
-* License:	GPL2 (http://www.gnu.org/licenses/gpl-2.0.html)
+*
+*        DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+*                    Version 2, December 2004
+*
+* Copyright (C) 2013 J. Ian Lindsay <josh.lindsay@gmail.com>
+*
+* Everyone is permitted to copy and distribute verbatim or modified
+* copies of this license document, and changing it is allowed as long
+* as the name is changed.
+*
+*            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+*   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+*
+*  0. You just DO WHAT THE FUCK YOU WANT TO.
+*
+*
 *
 * Author's BTC address:  17da1aqXEhdqMkbEq66nc2n5DeAnrnNbsK
-* 
+*
 * Requirements: mcrypt, gd
 *
 *
@@ -32,13 +47,13 @@
 			}
 
 			body { font-size:12px; font-family:Verdana; }
-			
+
 			span.error { color: #c20000; }
 			span.goodnews { color: #00c21d; }
 			h1 { font: small-caps 600 16px Helvetica, sans-serif;  margin: 0px;   }
 			h2 { font: small-caps 600 14px Helvetica, sans-serif;  margin: 0px;   }
 			h3 { font: small-caps 600 12px Helvetica, sans-serif;  margin: 0px;   }
-			
+
 			tr { margin-bottom:	3px; }
 			td {
 				font-size: 12px;
@@ -70,7 +85,7 @@ if (isset($_FILES) && isset($_FILES['upfile'])) {
 				$img = file_get_contents($file_path);
 				$state = 1;
 			}
-			else { 
+			else {
 				?><span class="error">There was a problem saving the file. There is likely nothing you can do to fix this.</span> <?php
 			}
 		}
@@ -96,9 +111,9 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 				$filename	= false;
 				if (isset($_FILES['message_file']) && strlen($_FILES['message_file']['tmp_name']) > 0) {
 					$msg = $_FILES['message_file']['tmp_name'];
-					
+
 					$filename	= $_FILES['message_file']['name'];
-					
+
 					$valid	= true;
 				}
 				else if (isset($_POST['message']) && strlen($_POST['message']) > 0) {
@@ -115,13 +130,13 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 					else {
 						// Here, we are going to try to make some guesses about the content disposition so we
 						//	can display it properly...
-						if ($env->store_filename) { 
+						if ($env->store_filename) {
 							?>
 							Normally, a link to download <!--<span class="goodnews">Per the sender's options, this file is <a href="tmp/"<?php echo $env->filename(); ?>>availible for download (<?php /* echo $env->filename(); */ ?>)</a>.</span> -->
 							would be present here, but it isn't because I haven't decided how to manage the security risks yet. You are free to download the source and let your webserver be the guinea pig. :-)
 							<?php
 						}
-						
+
 						$test_img	= (in_array(pathinfo($env->filename(), PATHINFO_EXTENSION), $allowedExts)) ? $msg_out : false;
 						if (!in_array(pathinfo($env->filename(), PATHINFO_EXTENSION), $allowedExts)) {
 							// Maybe test for txt? For binary data?
@@ -138,15 +153,15 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 						$debug_output	= $env->dump_errors();		// Use this to print debug messages.
 					}
 				}
-				
+
 				if (isset($msg) && strlen($msg) > 0) {
 					//$state = 3;
 					$env	= new StegImage($_POST['file_path'], $_POST['key']);
-					
+
 					$env->rescale	= (isset($_POST['rescale']) && strtolower($_POST['rescale']) == 'on');
 					$env->compress	= (isset($_POST['compress']) && strtolower($_POST['compress']) == 'on');
 					$env->store_filename	= (isset($_POST['store_filename']) && strtolower($_POST['store_filename']) == 'on');
-					
+
 					if ($env->setChannels((isset($_POST['enable_r']) && strtolower($_POST['enable_r']) == 'on'),
 									(isset($_POST['enable_g']) && strtolower($_POST['enable_g']) == 'on'),
 									(isset($_POST['enable_b']) && strtolower($_POST['enable_b']) == 'on')) == 0) {
@@ -155,7 +170,7 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 					else {
 						$env->visible_result	= (isset($_POST['v_output']) && strtolower($_POST['v_output']) == 'on');
 						$env->setMessage($msg, $filename);
-						
+
 						if ($env->errors() == 0) {
 							$env->outputImage($_POST['file_path'].'.png');
 							if (isset($_POST['debug']) && strtolower($_POST['debug']) == 'on') {
@@ -223,7 +238,7 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 								<tr><td colspan='2'><h2>Server-Side Checks</h2></td></tr>
 								<tr>
 									<td><b>Is GD available?: </b></td>
-									<?php 
+									<?php
 										$bool = function_exists("imagecreatefrompng");
 										if($bool){
 											echo "<td> Yes! </td>";
@@ -236,7 +251,7 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 								</tr>
 								<tr>
 									<td><b>Is Mcrypt available?: </b></td>
-									<?php 
+									<?php
 										$bool = function_exists("mcrypt_get_iv_size");
 										if($bool){
 											echo "<td> Yes! </td>";
@@ -247,11 +262,11 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 										}
 									?>
 								</tr>
-							</table>						
+							</table>
 						</td>
 
 					<tr><td colspan='2'>	&nbsp;</td></tr>
-	    		
+
 					<?php if ($state == 0) { ?>
 						<tr>
 							<td>File to upload:</td>

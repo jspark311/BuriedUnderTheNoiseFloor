@@ -3,11 +3,26 @@
 * File:		steg-img.php
 * Author:	J. Ian Lindsay
 * Date:		2013.03.22
-* License:	GPL2 (http://www.gnu.org/licenses/gpl-2.0.html)
+*
+*        DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+*                    Version 2, December 2004
+*
+* Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+*
+* Everyone is permitted to copy and distribute verbatim or modified
+* copies of this license document, and changing it is allowed as long
+* as the name is changed.
+*
+*            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+*   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+*
+*  0. You just DO WHAT THE FUCK YOU WANT TO.
+*
+*
 *
 * Author's BTC address:  17da1aqXEhdqMkbEq66nc2n5DeAnrnNbsK
-* 
-* Requirements: mcrypt, gd  
+*
+* Requirements: mcrypt, gd
 *
 *
 * This class is meant to embed an encrypted message into the noise-floor of a carrier image.
@@ -18,15 +33,15 @@
 *       | HEADER | MESSAGE DATA           | CHECKSUM |
 *       +--------+------------------------+----------+
 *         |        |                           |
-*         |        |                           +-- MD5, stored as binary (16 bytes). See Note0. 
+*         |        |                           +-- MD5, stored as binary (16 bytes). See Note0.
 *         |        |
 *         |        +-- ( IV + ENCRYPT( BZ2_COMPRESS(FILENAME + MESSAGE) ) )
 *         |
 *         +--ACTIVE CHANNELS:	3-bits		// Which channels are used to encode the data? See Note1.
 *            VERSION:			2 bytes		// The version of this program that wrote the image.
-*            HEADER LENGTH:		1 byte		// The length of this data structure.  
-*            MESSAGE PARAMS:	1 byte		// Control bits for how the message is handled. See Note5.  
-*            CHANNEL PARAMS:	1 byte		// These are reserved for later use, but will deal with carrier pre-processing. 
+*            HEADER LENGTH:		1 byte		// The length of this data structure.
+*            MESSAGE PARAMS:	1 byte		// Control bits for how the message is handled. See Note5.
+*            CHANNEL PARAMS:	1 byte		// These are reserved for later use, but will deal with carrier pre-processing.
 *            PAYLOAD SIZE:		4 bytes		// The size of the payload, including the checksum, but NOT the header.
 *
 * In an effort to keep the header as difficult as possible to detect, there are no parameters stored within it
@@ -36,16 +51,16 @@
 * Known errata:
 * ===========================
 * From the PHP doc...	http://www.php.net/manual/en/function.mt-srand.php
-*	"The Mersenne Twister implementation in PHP now uses a new seeding algorithm by Richard Wagner. 
-*	Identical seeds no longer produce the same sequence of values they did in previous versions. 
+*	"The Mersenne Twister implementation in PHP now uses a new seeding algorithm by Richard Wagner.
+*	Identical seeds no longer produce the same sequence of values they did in previous versions.
 *	This behavior is not expected to change again, but it is considered unsafe to rely upon it nonetheless."
-*	
-* We need to be able to seed the RNG, so openssl_random_pseudo_bytes() is not an option. 
-* 
+*
+* We need to be able to seed the RNG, so openssl_random_pseudo_bytes() is not an option.
+*
 */
 
 /*==========================================================================================================================
-Note0: Regarding the checksum 
+Note0: Regarding the checksum
  The MD5 checksum is the final 16-bytes of the bitstream. It is stored as binary, and its length is included in the
 	PAYLOAD_SIZE field of the header. The checksum only relates to the MESSAGE DATA, and not to the HEADER.
 ==========================================================================================================================*/
@@ -58,11 +73,11 @@ Note1: Regarding the first important pixel
 	RED CHANNEL ENABLED?		0x42 % 0x01	= 0 = FALSE
 	GREEN CHANNEL ENABLED?		0x55 % 0x01	= 1 = TRUE
 	BLUE CHANNEL ENABLED?		0x23 % 0x01	= 1 = TRUE
-	
- The HEADER_LENGTH parameter does not account for these 3-bits.  
+
+ The HEADER_LENGTH parameter does not account for these 3-bits.
 
  All data (including the rest of the HEADER) will respect the constraint so determined. Typically, you would want to use
-	every availible channel to keep the noise profile consistent and maximize capacity (or minimize carrier size). But a 
+	every availible channel to keep the noise profile consistent and maximize capacity (or minimize carrier size). But a
 	possible reason to use less than the maximum would be to overlay many messages (up to 3) in the same carrier with
 	different passwords.
 ==========================================================================================================================*/
@@ -94,11 +109,11 @@ Note6: Storing files
 	prepended to the data before compression (and therefore, before encryption as well). The file extension (if present)
 	will be preserved, regardless of padding and truncation of the rest of the filename.
 
- When the decrypting party successfully decodes the message, they can set $write_file = $path-to-dir, and the file will be 
-	re-consituted on their filesystem. This is DANGEROUS on webservers running this code, as an attacker could bypass many 
-	security layers related to file uploads. Then again... you can also leverage it to your advantage (putting back-doors 
+ When the decrypting party successfully decodes the message, they can set $write_file = $path-to-dir, and the file will be
+	re-consituted on their filesystem. This is DANGEROUS on webservers running this code, as an attacker could bypass many
+	security layers related to file uploads. Then again... you can also leverage it to your advantage (putting back-doors
 	for arbitrary script into your systems).
-	
+
 ==========================================================================================================================*/
 
 
@@ -117,39 +132,39 @@ class StegImage {
 	public	$y		= 0;
 
 	public	$visible_result	= false;	// Set to true to expose the affected pixels in the image.
-	
+
 	public	$error		= array();		// If an error happened, it will be appended to this array of strings.
 	public	$verbosity	= LOG_DEBUG;	// Messages this big or bigger will be logged.
-	
+
 	public	$rescale		= true;		// Should the output image be scaled to a minimum-size needed to fit the message?
 	public	$compress		= true;		// Crush the message prior to encrypting?
-	
+
 	public	$store_filename	= true;		// If the user sets this to false, we will not store file information.
 	public	$write_file		= false;	// Decrypt only: Should we write an output file, if applicable?
 	private	$file_name_info	= '';		// Holds the filename if setMessage() is called with a path.
-	
+
 	private	$enable_red		= true;		//
 	private	$enable_green	= true;		// Enabled channels.
 	private	$enable_blue	= true;		//
-	
+
 	private	$ciphertext	= '';
 	private	$plaintext	= '';
 	private	$key		= '';		// Key material for the cipher algo.
 	private	$header		= '';		// Prepended to the ciphertext to aid choice about length.
-	
+
 	private	$offset			= -1;		// The first pixel to mean something.
 	private	$stride_seed	= -1;		// Use an arythmic stride between relevant pixels.
 	private	$strides		= array();	// Count off the intervals between pixels.
 	private	$max_stride		= -1;		// How much range should we allow in the arhythmic stride?
 	private	$usable_pixels	= 0;		// How many pixels are we capable of using?
 	public	$max_payload_size	= -1;	// Used to decide how much plaintext we can stuff into the carrier.
-	
+
 	private	$iv_size		= -1;
 	private	$payload_size	= -1;	// The size of the message after encryption and compression
 	private	$bit_cursor		= 0;	// Used to keep track of how many bits we've (de)modulated.
 
 
-	
+
 	/**************************************************************************
 	* Public functions.                                                       *
 	**************************************************************************/
@@ -170,8 +185,8 @@ class StegImage {
 			$this->log_error(__METHOD__.' Password too short.', LOG_ERR);
 		}
 	}
-	
-	
+
+
 	/**
 	* Set the active channels. Passed no parameters, all channels will be used.
 	*	This must be done before the image is set.
@@ -188,9 +203,9 @@ class StegImage {
 		$this->log_error(__METHOD__.' Channel settings: 0x'.sprintf('%02X', $bpp));
 		return true;
 	}
-	
 
-	
+
+
 	/**
 	* Setting the message.
 	*/
@@ -203,7 +218,7 @@ class StegImage {
 					if (is_readable($message)) {
 						$this->plaintext	= file_get_contents($message);
 						if ($this->store_filename) {
-							if ($name_override) $message	= $name_override;		// Facilitates HTML forms. 
+							if ($name_override) $message	= $name_override;		// Facilitates HTML forms.
 
 							$base	= basename($message);
 							$this->file_name_info	= $this->normalize_filename($base);
@@ -223,7 +238,7 @@ class StegImage {
 			else $this->log_error(__METHOD__.' Plaintext has already been set.', LOG_ERR);
 		}
 		else $this->log_error(__METHOD__.' Message length is zero.', LOG_ERR);
-		
+
 		// If we loaded a message successfully, try to encrypt it and fit it into the carrier.
 		if (strlen($this->plaintext) > 0) {
 			$this->iv_size	= mcrypt_get_iv_size(CIPHER, BLOCK_MODE);		// We need the size of the IV...
@@ -232,7 +247,7 @@ class StegImage {
 					if ($this->payload_size <= $this->max_payload_size) {
 						// Only scale the image down. Never up. To do otherwise exposes the message.
 						if ($this->rescale) $this->rescale_carrier();
-							
+
 						if ($this->modulate()) {
 							$return_value	= true;
 						}
@@ -246,8 +261,8 @@ class StegImage {
 		}
 		return $return_value;
 	}
-	
-	
+
+
 	/**
 	* Returns a string of length zero. Always.
 	*/
@@ -258,8 +273,8 @@ class StegImage {
 		$base	= (strlen($base) > 32) ? substr($base, strlen($base)-32):sprintf("%' 32s", $base);
 		return $base;
 	}
-	
-	
+
+
 	/**
 	* Tries to retreive a message from the carrier and the given password.
 	*/
@@ -286,8 +301,8 @@ class StegImage {
 		else $this->log_error(__METHOD__.' No carrier loaded.', LOG_ERR);
 		return $return_value;
 	}
-	
-	
+
+
 	/**
 	*	Dumps the image to a browser (no parameter given), or a file (if a path was provided.
 	*/
@@ -301,15 +316,15 @@ class StegImage {
 			imagepng($this->image);
 		}
 	}
-	
-	
+
+
 	/**
 	* Return the filename.
 	*/
 	public function filename() {
 		return $this->file_name_info;
 	}
-	
+
 	/**
 	*	Clean up our mess.
 	*/
@@ -317,12 +332,12 @@ class StegImage {
 		imagedestroy($this->image);
 	}
 
-	
-	
+
+
 	/**************************************************************************
 	* Everything below this block is internal machinary of the class.         *
 	**************************************************************************/
-	
+
 	/**
 	* Try to load the carrier file specified by the argument.
 	*	Returns true on success and false on failure.
@@ -353,7 +368,7 @@ class StegImage {
 							$this->log_error($ptr.' is an unsupported file extention. Using a blank canvas.', LOG_WARNING);
 							break;
 					}
-	
+
 					if ($this->image) {
 						$this->x	= imagesx($this->image);
 						$this->y	= imagesy($this->image);
@@ -382,7 +397,7 @@ class StegImage {
 
 
 	/**
-	* Call to shink the carrier to the minimum size required to store the bitstream. 
+	* Call to shink the carrier to the minimum size required to store the bitstream.
 	*	Maintains aspect ratio.
 	*	Checks for adequate size.
 	*	Regenerates strides.
@@ -399,17 +414,17 @@ class StegImage {
 			$bits	= $bits - $bpp;
 		}
 		$this->log_error(__METHOD__.' Need a total of '.$required_pixels.' pixels to store the given message with given password.');
-		
+
 		$n	= ceil(sqrt($required_pixels / $ratio));
 		$width	= $n;
 		$height	= $n;
 		if ($this->x >= $this->y) $width = ceil($width * $ratio);
 		else $height = ceil($height * $ratio);
-		
+
 		$img	= imagecreatetruecolor($width, $height);
 		if ($img) {
 			if (imagecopyresized($img, $this->image, 0, 0, 0, 0, $width, $height, $this->x, $this->y)) {
-				if (($height * $width) < ($this->x * $this->y)) {		// Did we actually shrink the carrier? 
+				if (($height * $width) < ($this->x * $this->y)) {		// Did we actually shrink the carrier?
 					if (($height * $width) >= $required_pixels) {		// Do we have enough space in the new carrier?
 						imagedestroy($this->image);
 						$this->image	= $img;
@@ -429,8 +444,8 @@ class StegImage {
 		else $this->log_error(__METHOD__.' Failed to create the scaled carrier..', LOG_ERR);
 		return $return_value;
 	}
-	
-	
+
+
 	/**
 	* We need a truecolor image to do our trick. Save the user from vimself if ve submits
 	*	an image that isn't up to spec.
@@ -443,8 +458,8 @@ class StegImage {
 		$this->log_error(__METHOD__.' Resampled image into truecolor.', LOG_WARNING);
 		return $img;
 	}
-	
-	
+
+
 	/**************************************************************************
 	* These functions deal with deriving parameters from the key material.    *
 	**************************************************************************/
@@ -463,15 +478,15 @@ class StegImage {
 	*/
 	private function deriveParamsFromKey($password) {
 		$t_initial = microtime(true);
-		
+
 		$hash	= hash('sha256', $password, true);	// Give us back 32 bytes.
 		$hash_arr	= str_split($hash, 1);		// Need to access it byte-wise...
 		$this->offset	= ord($hash_arr[0]);	// Where does the first header byte go?
 		// How many hash rounds should we run on the password?
 		// Limit it to 9000. We don't want to go over 9000.
-		
+
 		$rounds	= ((ord($hash[1]) * 256) + ord($hash[2])) % 9000;
-		$this->max_stride	= 2+((ord($hash[3]) & 0xFF) % 14);	// The maximum stride.	
+		$this->max_stride	= 2+((ord($hash[3]) & 0xFF) % 14);	// The maximum stride.
 		$this->log_error(__METHOD__.' Hash: ');
 		$this->log_error($this->printBinStr($hash));
 		// Use the remaining bits to seed the RNG for arythmic stride.
@@ -499,7 +514,7 @@ class StegImage {
 	/**************************************************************************
 	* Logging functions.                                                      *
 	**************************************************************************/
-	
+
 	/**
 	*	Returns the number of errors and warnings so far experienced by this class.
 	*/
@@ -513,7 +528,7 @@ class StegImage {
 		return $return_value;
 	}
 
-	
+
 	/**
 	*	Prints the error log.
 	*/
@@ -524,7 +539,7 @@ class StegImage {
 		}
 	}
 
-	
+
 	/**
 	* Like above, but returns a string instead. The string is suitable for file or console dump.
 	*	Pass an integer parameter to narrow the output by loglevel.
@@ -557,10 +572,10 @@ class StegImage {
 	private function log_error($msg, $code = LOG_DEBUG) {
 		$this->error[]	= array('code' => $code, 'message' => $msg);
 	}
-	
-	
-	/** 
-	* Return a string that contains the string representation of the binary value. 
+
+
+	/**
+	* Return a string that contains the string representation of the binary value.
 	*	Optional length parameter. Usually guesses length correctly if omitted.
 	*/
 	private function printBinStr($str, $len = -1) {
@@ -573,7 +588,7 @@ class StegImage {
 	}
 
 
-	
+
 	/**
 	* Projective function that will run the arythmic stride as far out as the carrier
 	*	will allow, and save the results as an array of integers. The modulator will
@@ -609,13 +624,13 @@ class StegImage {
 		$bpp = $this->getBitsPerPixel();
 		$raw_pixels	= ($this->x * $this->y) - $this->offset;
 		$stride_pix	= count($this->strides);
-		
+
 		$this->max_payload_size		= floor(($bpp * $stride_pix) / 8);		// The gross size.
 		$this->log_error(__METHOD__.' Maximum message size is '. $this->max_payload_size . ' bytes.', LOG_INFO);
 		return $this->max_payload_size;
 	}
-	
-	
+
+
 	/**
 	* Returns an integer that indicates how many bits we can fit into each pixel using the current settings.
 	*/
@@ -637,7 +652,7 @@ class StegImage {
 	**************************************************************************/
 
 	/**
-	* We need to record which channels we are going to make use of. 
+	* We need to record which channels we are going to make use of.
 	*	Record those pixels at the offset.
 	*/
 	private function set_channel_spec() {
@@ -652,19 +667,19 @@ class StegImage {
 		$red	= $red		| ($this->enable_red	? 0x01:0x00);
 		$green	= $green	| ($this->enable_green	? 0x01:0x00);
 		$blue	= $blue		| ($this->enable_blue	? 0x01:0x00);
-		
+
 		imagesetpixel($this->image, $j, $i, imagecolorallocate($this->image, $red, $green, $blue));
 		$this->log_error(__METHOD__.' Wrote ('.$red.', '.$green.', '.$blue.') (R, G, B) to offset '.$this->offset.'.');
 	}
-	
-	
+
+
 	/*
-	*	Encrypt the plaintext. 
+	*	Encrypt the plaintext.
 	*/
 	private function encrypt() {
 		$return_value	= true;
 		$message_params	= 0x00;
-		
+
 		if ($this->store_filename) {
 			if (strlen($this->file_name_info) != 32) {
 				$this->log_error(__METHOD__.' Filename was not 32 bytes. storing it generically...', LOG_WARNING);
@@ -676,7 +691,7 @@ class StegImage {
 		$nu_iv			= mcrypt_create_iv($this->iv_size, MCRYPT_DEV_URANDOM);
 		$compressed		= ($this->compress)	? bzcompress($this->plaintext, 9):$this->plaintext;
 		$encrypted		= $nu_iv. mcrypt_encrypt(CIPHER, $this->key, $compressed, BLOCK_MODE, $nu_iv);
-		
+
 		$checksum	= hash('md5', $encrypted, true);
 		$message_params	= $message_params | (($this->compress)			? 0x01:0x00);
 		$message_params	= $message_params | (($this->store_filename)	? 0x04:0x00);
@@ -685,7 +700,7 @@ class StegImage {
 		$this->ciphertext	= pack('vxCxN', VERSION_CODE, $message_params, strlen($encrypted.$checksum)).$encrypted.$checksum;
 
 		$this->payload_size	= strlen($this->ciphertext);	// Record the number of bytes to modulate.
-		
+
 		if ($this->compress) {
 			$pt_len		= strlen($this->plaintext);
 			$comp_len	= strlen($compressed);
@@ -696,19 +711,19 @@ class StegImage {
 		}
 		return $return_value;
 	}
-	
-	
+
+
 	/*
 	*	Embed the header and ciphertext into the carrier.
 	*/
 	private function modulate() {
 		$this->set_channel_spec();		// Record the channels in use.
-		
+
 		$this->bit_cursor	= 0;
 		$initial	= $this->offset + $this->strides[0];	// The offset stores the active channel settings.
-		
+
 		$this->log_error(__METHOD__.' Initial pixel of modulation: ('.$this->get_x_coords_by_linear($initial).', '.$this->get_y_coords_by_linear($initial).') (x, y).');
-		
+
 		// Visit each usable pixel and modulate it.
 		$abs_pix	= $this->offset;
 		for ($n = 0; $n < count($this->strides); $n++) {
@@ -717,16 +732,16 @@ class StegImage {
 			$j	= $this->get_y_coords_by_linear($abs_pix);
 
 			$temp	= imagecolorat($this->image, $i, $j);
-			
+
 			$red	= ($temp >> 16) & 0xFF;
 			$green	= ($temp >> 8) & 0xFF;
 			$blue	= ($temp) & 0xFF;
-			
+
 			if ($this->visible_result) {
 				if ($this->enable_red)		$bit		= $this->getBit();
 				if ($this->enable_blue) 	$bit		= $this->getBit();
 				if ($this->enable_green)	$bit		= $this->getBit();
-				
+
 				if ($bit === false) {
 					$red = 0x00;
 					$blue = 0x00;
@@ -743,12 +758,12 @@ class StegImage {
 					$bit		= $this->getBit();
 					if ($bit !== FALSE) $red	= ($red & 0xFE) + $bit;
 				}
-				
+
 				if ($this->enable_blue) {
 					$bit		= $this->getBit();
 					if ($bit !== FALSE) $blue	= ($blue & 0xFE) + $bit;
 				}
-	
+
 				if ($this->enable_green) {
 					$bit		= $this->getBit();
 					if ($bit !== FALSE) $green	= ($green & 0xFE) + $bit;
@@ -756,11 +771,11 @@ class StegImage {
 			}
 			imagesetpixel($this->image, $i, $j, imagecolorallocate($this->image, $red, $green, $blue));
 		}
-		
+
 		return true;
 	}
-	
-	
+
+
 	/**
 	*	Given image coordinates, get the bit to be embedded in that pixel.
 	*	Otherwise, returns 0 or 1, as the case may dictate.
@@ -785,26 +800,26 @@ class StegImage {
 	/**
 	* Helper function that returns the x-component of an image co-ordinate if
 	*	we give it a linear length argument.
-	*/ 
+	*/
 	private function get_x_coords_by_linear($linear) {
 		$return_value	= $linear % $this->x;
 		return $return_value;
 	}
-	
+
 	/**
 	* Helper function that returns the y-component of an image co-ordinate if
 	*	we give it a linear length argument.
-	*/ 
+	*/
 	private function get_y_coords_by_linear($linear) {
 		$return_value	= floor($linear / $this->x);
 		return $return_value;
 	}
-	
+
 
 	/**************************************************************************
 	* Functions related to getting the message out of the image.              *
 	**************************************************************************/
-	
+
 	/**
 	* Before we can read the header, we need to know which channels it is spread
 	*	across.
@@ -821,25 +836,25 @@ class StegImage {
 
 
 	/*
-	*	Decrypt the ciphertext. 
+	*	Decrypt the ciphertext.
 	*/
 	private function decrypt() {
 		$return_value	= true;
 		$this->iv_size	= mcrypt_get_iv_size(CIPHER, BLOCK_MODE);		// We need the size of the IV...
 		$nu_iv  = substr($this->ciphertext, 0, $this->iv_size);
-		
+
 		$ct     = substr($this->ciphertext, $this->iv_size, $this->payload_size-$this->iv_size);
 		$decrypted		= mcrypt_decrypt(CIPHER, $this->key, $ct, BLOCK_MODE, $nu_iv);
 		$decompressed	= ($this->compress) ? bzdecompress($decrypted) : $decrypted;
 		$this->file_name_info	= trim(($this->store_filename) ? substr($decompressed, 0, 32) : '');
 		$this->plaintext	= trim(($this->store_filename) ? substr($decompressed, 32) : $decompressed);
-		
+
 		if ($this->compress) $this->log_error(__METHOD__.' Compression inflated '.strlen($decrypted).' bytes into '.strlen($decompressed).' bytes.', LOG_INFO);
 		if ($this->store_filename) $this->log_error(__METHOD__.' Retrieved file name: '.$this->file_name_info, LOG_INFO);
 		return $return_value;
 	}
-	
-	
+
+
 	/*
 	*	Extract the header and ciphertext from the carrier.
 	*/
@@ -851,7 +866,7 @@ class StegImage {
 
 		$initial	= $this->offset + $this->strides[0];	// The offset stores the active channel settings.
 		$this->log_error(__METHOD__.' Initial pixel of demodulation: ('.$this->get_x_coords_by_linear($initial).', '.$this->get_y_coords_by_linear($initial).') (x, y).');
-		
+
 		// Visit each usable pixel and demodulate it.
 		$abs_pix	= $this->offset;
 		for ($n = 0; $n < count($this->strides); $n++) {
@@ -860,26 +875,26 @@ class StegImage {
 			$j	= $this->get_y_coords_by_linear($abs_pix);
 
 			$temp	= imagecolorat($this->image, $i, $j);
-			
+
 			if ($this->enable_red) {
 				$all_bytes[$byte]	= ($all_bytes[$byte] >> 1) + ((($temp >> 16) & 0x01) << 7);
 				$bit++;
 				if ($bit % 8 == 0)	$all_bytes[++$byte] = 0x00;
 			}
-			
+
 			if ($this->enable_blue) {
 				$all_bytes[$byte]	= ($all_bytes[$byte] >> 1) + ((($temp) & 0x01) << 7);
 				$bit++;
 				if ($bit % 8 == 0) $all_bytes[++$byte] = 0x00;
 			}
-			
+
 			if ($this->enable_green) {
 				$all_bytes[$byte]	= ($all_bytes[$byte] >> 1) + ((($temp >> 8) & 0x01) << 7);
 				$bit++;
 				if ($bit % 8 == 0) $all_bytes[++$byte] = 0x00;
 			}
 		}
-		
+
 		// This function call makes a choice about the data we just read,
 		//	and unifies the channels into a single coherrant bit-stream, or
 		//	it errors.
@@ -893,9 +908,9 @@ class StegImage {
 		else $this->log_error(__METHOD__.'Failed to decode the header.', LOG_ERR);
 		return false;
 	}
-	
-	
-	
+
+
+
 	private function decodeHeader($bytes) {
 		// First, we need to find the header...
 		$ver	= unpack('v', substr($bytes, 0, 2));
@@ -914,8 +929,8 @@ class StegImage {
 			return false;
 		}
 	}
-	
-	
+
+
 	/**
 	* The last 16 bytes of the ciphertext will be a checksum for the encrypted message.
 	*	The header has already been removed from the cipher text, so no need to tip-toe around it.
@@ -930,15 +945,15 @@ class StegImage {
 		if (strncmp($chksum, $hash, 16) == 0) return true;
 		return false;
 	}
-	
-	
+
+
 	/**
 	* Report our version.
 	*/
 	public static function getVersion() {
 		return '0x'.sprintf("%02X", VERSION_CODE);
 	}
-	
+
 	/**
 	* Takes two (or three) passwords and tests them for mutual compatibility. This is needed only in cases
 	*	where you want to overlay more than one message (up to three, total) in the same carrier.
@@ -956,15 +971,15 @@ class StegImage {
 		$hash_arr0	= str_split($hash0, 1);
 		$hash_arr1	= str_split($hash1, 1);
 		$hash_arr2	= str_split($hash2, 1);
-		
+
 		$offset0	= ord($hash_arr0[0]);
 		$offset1	= ord($hash_arr1[0]);
 		$offset2	= ord($hash_arr2[0]);
-		
+
 		$max_stride0	= 2+((ord($hash0[3]) & 0xFF) % 14);
 		$max_stride1	= 2+((ord($hash1[3]) & 0xFF) % 14);
 		$max_stride2	= 2+((ord($hash2[3]) & 0xFF) % 14);
-		
+
 		// Use the remaining bits to seed the RNG for arythmic stride.
 		$temp	= array(0,0,0,0);
 		for ($i = 0; $i < 7; $i++) {
@@ -990,13 +1005,13 @@ class StegImage {
 			$temp[3]	= ord($hash2[($i+25)]) ^ $temp[3];
 		}
 		$stride_seed2 = ((($temp[0] *16777216) % 128) + ($temp[1] * 65536) + ($temp[2] * 256) + $temp[3]);
-		
+
 		$strides0	= array();
 		$strides1	= array();
 		$strides2	= array();
 
 		$test_limit	= ($pass2) ? max($offset0, $offset1, $offset2) : max($offset0, $offset1);
-		
+
 		mt_srand($stride_seed0);
 		$i = 0;
 		$n = $offset0;
@@ -1039,7 +1054,7 @@ class StegImage {
 				$return_value	= true;
 			}
 		}
-		
+
 		return $return_value;
 	}
 };
@@ -1049,7 +1064,7 @@ class StegImage {
 	1) testPasswordCompatibility() must return true for the given passwords, or else one or more messages will be lost.
 	2) Rescaling must be disabled after the first message, or all previosly-encoded messages will be lost.
 	3) A channel used for one message cannot be used for any others. This means a maximum of 3 messages per carrier.
-	
+
 	For safety's sake, encode the largest message first with rescale enabled. Then disable rescale for all subsequent (smaller)
 	messages. It is left to the user of the class to ensure these constrains are met.
 */
@@ -1077,7 +1092,7 @@ class StegImage {
 //$env->rescale	= false;								// If we re-scale, we'll lose the previous message.
 
 //$env->setMessage('This is my secondary message.');
-//$env->outputImage('output.png'); 
+//$env->outputImage('output.png');
 
 
 
@@ -1088,7 +1103,7 @@ class StegImage {
 //$dec->dump_params();
 //$dec->print_errors();
 //echo '<br /><br /><br />';
-	
+
 //if ($msg) {
 	//echo $msg;
 //}
