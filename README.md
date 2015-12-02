@@ -11,7 +11,6 @@ If anyone is feeling generous, my bitcoin address is *17da1aqXEhdqMkbEq66nc2n5De
 
 Comments and issues posted on github will be answered. Pull-requests are always welcome if you've fixed or enhanced something.
 
---------
 
 Class source is well commented. The form.php file is the test fixture that the user interacts with, but it is not required. The class is stand-alone.
 The test fixture is mostly valuable as a usage example, as all of the class's major features are broken out into options.
@@ -19,7 +18,6 @@ The test fixture is mostly valuable as a usage example, as all of the class's ma
 
 
 ### Additionally
----
   * There must be a directory with the appropriate permissions named uploads in the same folder as form.php
 
   * GD must be installed and enabled
