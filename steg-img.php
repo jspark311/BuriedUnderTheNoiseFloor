@@ -4,19 +4,25 @@
 * Author:	J. Ian Lindsay
 * Date:		2013.03.22
 *
-*        DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-*                    Version 2, December 2004
+* Copyright (c) 2015 J. Ian Lindsay
 *
-* Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
 *
-* Everyone is permitted to copy and distribute verbatim or modified
-* copies of this license document, and changing it is allowed as long
-* as the name is changed.
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
 *
-*            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-*   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
-*
-*  0. You just DO WHAT THE FUCK YOU WANT TO.
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+* THE SOFTWARE.
 *
 *
 *
@@ -371,9 +377,9 @@ class StegImage {
 
 					if ($this->image) {
 						$this->x	= imagesx($this->image);
-						$this->y	= imagesy($this->image);
+						__y	= imagesy($this->image);
 						if (!imageistruecolor($this->image)) $this->image	= $this->upgrade_color();
-						$this->log_error(__METHOD__.' Loaded carrier with size ('.$this->x.', '.$this->y.').');
+						$this->log_error(__METHOD__.' Loaded carrier with size ('.$this->x.', '.__y.').');
 						$return_value	= true;
 					}
 					else {
@@ -405,7 +411,7 @@ class StegImage {
 	private function rescale_carrier() {
 		$return_value	= false;
 		$bits	= $this->payload_size * 8;
-		$ratio	= max($this->x, $this->y) / min($this->x, $this->y);
+		$ratio	= max($this->x, __y) / min($this->x, __y);
 		$required_pixels	= $this->offset;
 		$bpp = $this->getBitsPerPixel();	// How many bits-per-pixel can we have?
 		$n	= 0;
@@ -418,19 +424,19 @@ class StegImage {
 		$n	= ceil(sqrt($required_pixels / $ratio));
 		$width	= $n;
 		$height	= $n;
-		if ($this->x >= $this->y) $width = ceil($width * $ratio);
+		if ($this->x >= __y) $width = ceil($width * $ratio);
 		else $height = ceil($height * $ratio);
 
 		$img	= imagecreatetruecolor($width, $height);
 		if ($img) {
-			if (imagecopyresized($img, $this->image, 0, 0, 0, 0, $width, $height, $this->x, $this->y)) {
-				if (($height * $width) < ($this->x * $this->y)) {		// Did we actually shrink the carrier?
+			if (imagecopyresized($img, $this->image, 0, 0, 0, 0, $width, $height, $this->x, __y)) {
+				if (($height * $width) < ($this->x * __y)) {		// Did we actually shrink the carrier?
 					if (($height * $width) >= $required_pixels) {		// Do we have enough space in the new carrier?
 						imagedestroy($this->image);
 						$this->image	= $img;
 						$this->x	= imagesx($img);
-						$this->y	= imagesy($img);
-						$this->log_error(__METHOD__.' Scaled carrier into minimum required size for the given password: ('.$this->x.', '.$this->y.').', LOG_INFO);
+						__y	= imagesy($img);
+						$this->log_error(__METHOD__.' Scaled carrier into minimum required size for the given password: ('.$this->x.', '.__y.').', LOG_INFO);
 						$this->strides	= array();	// We will need to truncate the stride array because our image has shrunk.
 						$this->demarcate_strides();
 					}
@@ -452,8 +458,8 @@ class StegImage {
 	*	Returns a reference to the new truecolor image.
 	*/
 	private function upgrade_color() {
-		$img	= imagecreatetruecolor($this->x, $this->y);
-		imagecopy($img, $this->image, 0, 0, 0, 0, $this->x, $this->y);
+		$img	= imagecreatetruecolor($this->x, __y);
+		imagecopy($img, $this->image, 0, 0, 0, 0, $this->x, __y);
 		imagedestroy($this->image);
 		$this->log_error(__METHOD__.' Resampled image into truecolor.', LOG_WARNING);
 		return $img;
@@ -598,7 +604,7 @@ class StegImage {
 		if ($this->stride_seed >= 0) {
 			mt_srand($this->stride_seed);
 			$this->usable_pixels	= 0;	// How many pixels can we use?
-			$total_remaining	= ($this->x * $this->y) - $this->offset;	// Total remaining pixels.
+			$total_remaining	= ($this->x * __y) - $this->offset;	// Total remaining pixels.
 			while ($total_remaining > 0) {
 				$delta	= mt_rand(1, $this->max_stride);
 				$total_remaining	= $total_remaining - $delta;
@@ -622,7 +628,7 @@ class StegImage {
 	*/
 	private function findMaxPayloadSize() {
 		$bpp = $this->getBitsPerPixel();
-		$raw_pixels	= ($this->x * $this->y) - $this->offset;
+		$raw_pixels	= ($this->x * __y) - $this->offset;
 		$stride_pix	= count($this->strides);
 
 		$this->max_payload_size		= floor(($bpp * $stride_pix) / 8);		// The gross size.

@@ -4,27 +4,6 @@
 * Author:	J. Ian Lindsay
 * Date:		2013.03.22
 *
-*        DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-*                    Version 2, December 2004
-*
-* Copyright (C) 2013 J. Ian Lindsay <josh.lindsay@gmail.com>
-*
-* Everyone is permitted to copy and distribute verbatim or modified
-* copies of this license document, and changing it is allowed as long
-* as the name is changed.
-*
-*            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-*   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
-*
-*  0. You just DO WHAT THE FUCK YOU WANT TO.
-*
-*
-*
-* Author's BTC address:  17da1aqXEhdqMkbEq66nc2n5DeAnrnNbsK
-*
-* Requirements: mcrypt, gd
-*
-*
 * This page is a reasonably well-packaged test fixture for the StegImage class.
 *	As of this writing, it is the most extensive documentation I've written.
 *	It's hard on the eyes. Sorry about that.
