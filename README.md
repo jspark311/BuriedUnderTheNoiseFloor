@@ -5,7 +5,7 @@ A PHP program to compress, encrypt, and hide messages inside of PNG files.
 
 [For those of you who would rather use JavaScript](https://github.com/jspark311/node-bury).
 
-Write up is at my [blog](http://www.joshianlindsay.com/index.php?id=126).
+Write up is at my [blog](https://joshianlindsay.com/index.php?id=126).
 
 If anyone is feeling generous, my bitcoin address is *17da1aqXEhdqMkbEq66nc2n5DeAnrnNbsK*. Donations help me justify spending time on my computer to my wife. :-)
 
