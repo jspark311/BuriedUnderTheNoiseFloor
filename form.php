@@ -45,6 +45,7 @@
 			<h1>Messages:</h1>
 <?php
 require('steg-img.php');
+
 // $state decides what this page does.
 //	0: Fresh upload
 //	1: File uploaded, ask for params.
@@ -193,25 +194,6 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 						</td>
 					</tr>
 					<tr>
-						<td colspan="2">
-							<table>
-								<tr><td colspan='2'><h2>Hash set</h2></td></tr>
-								<tr>
-									<td><b>form.php:</b></td>
-									<td><?php	echo hash('sha256', file_get_contents(__FILE__));	?>
-									</td>
-								</tr>
-								<tr>
-									<td><b>steg-img.php:</b></td>
-									<td><?php	echo hash('sha256', file_get_contents('steg-img.php'));	?>
-								</tr>
-								<tr>
-									<td><b>Version code:</b></td>
-									<td><?php	echo StegImage::getVersion();	?>
-								</tr>
-							</table>
-						</td>
-					</tr>
 						<td>
 							<table>
 								<tr><td colspan='2'><h2>Server-Side Checks</h2></td></tr>
@@ -243,6 +225,27 @@ If you fail to supply a message, it will be assumed that you are trying to decod
 								</tr>
 							</table>
 						</td>
+                    </tr>
+					<tr>
+						<td colspan="2">
+							<table>
+								<tr><td colspan='2'><h2>Hash set</h2></td></tr>
+								<tr>
+									<td><b>form.php:</b></td>
+									<td><?php	echo hash('sha256', file_get_contents(__FILE__));	?>
+									</td>
+								</tr>
+								<tr>
+									<td><b>steg-img.php:</b></td>
+									<td><?php	echo hash('sha256', file_get_contents('steg-img.php'));	?>
+								</tr>
+								<tr>
+									<td><b>Version code:</b></td>
+									<td><?php echo StegImage::getVersion(); ?>
+								</tr>
+							</table>
+						</td>
+					</tr>
 
 					<tr><td colspan='2'>	&nbsp;</td></tr>
 
