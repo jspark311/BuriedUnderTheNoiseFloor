@@ -377,9 +377,9 @@ class StegImage {
 
 					if ($this->image) {
 						$this->x	= imagesx($this->image);
-						__y	= imagesy($this->image);
+						$this->y	= imagesy($this->image);
 						if (!imageistruecolor($this->image)) $this->image	= $this->upgrade_color();
-						$this->log_error(__METHOD__.' Loaded carrier with size ('.$this->x.', '.__y.').');
+						$this->log_error(__METHOD__.' Loaded carrier with size ('.$this->x.', '.$this->y.').');
 						$return_value	= true;
 					}
 					else {
@@ -411,7 +411,7 @@ class StegImage {
 	private function rescale_carrier() {
 		$return_value	= false;
 		$bits	= $this->payload_size * 8;
-		$ratio	= max($this->x, __y) / min($this->x, __y);
+		$ratio	= max($this->x, $this->y) / min($this->x, $this->y);
 		$required_pixels	= $this->offset;
 		$bpp = $this->getBitsPerPixel();	// How many bits-per-pixel can we have?
 		$n	= 0;
@@ -424,19 +424,19 @@ class StegImage {
 		$n	= ceil(sqrt($required_pixels / $ratio));
 		$width	= $n;
 		$height	= $n;
-		if ($this->x >= __y) $width = ceil($width * $ratio);
+		if ($this->x >= $this->y) $width = ceil($width * $ratio);
 		else $height = ceil($height * $ratio);
 
 		$img	= imagecreatetruecolor($width, $height);
 		if ($img) {
-			if (imagecopyresized($img, $this->image, 0, 0, 0, 0, $width, $height, $this->x, __y)) {
-				if (($height * $width) < ($this->x * __y)) {		// Did we actually shrink the carrier?
+			if (imagecopyresized($img, $this->image, 0, 0, 0, 0, $width, $height, $this->x, $this->y)) {
+				if (($height * $width) < ($this->x * $this->y)) {		// Did we actually shrink the carrier?
 					if (($height * $width) >= $required_pixels) {		// Do we have enough space in the new carrier?
 						imagedestroy($this->image);
 						$this->image	= $img;
 						$this->x	= imagesx($img);
-						__y	= imagesy($img);
-						$this->log_error(__METHOD__.' Scaled carrier into minimum required size for the given password: ('.$this->x.', '.__y.').', LOG_INFO);
+						$this->y	= imagesy($img);
+						$this->log_error(__METHOD__.' Scaled carrier into minimum required size for the given password: ('.$this->x.', '.$this->y.').', LOG_INFO);
 						$this->strides	= array();	// We will need to truncate the stride array because our image has shrunk.
 						$this->demarcate_strides();
 					}
@@ -458,8 +458,8 @@ class StegImage {
 	*	Returns a reference to the new truecolor image.
 	*/
 	private function upgrade_color() {
-		$img	= imagecreatetruecolor($this->x, __y);
-		imagecopy($img, $this->image, 0, 0, 0, 0, $this->x, __y);
+		$img	= imagecreatetruecolor($this->x, $this->y);
+		imagecopy($img, $this->image, 0, 0, 0, 0, $this->x, $this->y);
 		imagedestroy($this->image);
 		$this->log_error(__METHOD__.' Resampled image into truecolor.', LOG_WARNING);
 		return $img;
@@ -604,7 +604,7 @@ class StegImage {
 		if ($this->stride_seed >= 0) {
 			mt_srand($this->stride_seed);
 			$this->usable_pixels	= 0;	// How many pixels can we use?
-			$total_remaining	= ($this->x * __y) - $this->offset;	// Total remaining pixels.
+			$total_remaining	= ($this->x * $this->y) - $this->offset;	// Total remaining pixels.
 			while ($total_remaining > 0) {
 				$delta	= mt_rand(1, $this->max_stride);
 				$total_remaining	= $total_remaining - $delta;
@@ -628,7 +628,7 @@ class StegImage {
 	*/
 	private function findMaxPayloadSize() {
 		$bpp = $this->getBitsPerPixel();
-		$raw_pixels	= ($this->x * __y) - $this->offset;
+		$raw_pixels	= ($this->x * $this->y) - $this->offset;
 		$stride_pix	= count($this->strides);
 
 		$this->max_payload_size		= floor(($bpp * $stride_pix) / 8);		// The gross size.
